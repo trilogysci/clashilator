@@ -18,6 +18,7 @@ import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.Setup
 import Distribution.Simple.Program
 import Distribution.Simple.Utils (infoNoWrap)
+import Distribution.Utils.Path (unsafeMakeSymbolicPath, getSymbolicPath)
 import Distribution.Verbosity
 import Distribution.ModuleName
 import Distribution.Types.UnqualComponentName
@@ -30,8 +31,11 @@ import System.FilePath
 import GHC (Ghc)
 #if MIN_VERSION_ghc(8,10,0)
 import GHC (getSession, setSession)
+#if MIN_VERSION_ghc(9,0,0)
+#else
 import HscTypes (HscEnv (..))
 import Linker
+#endif
 #endif
 
 lookupX :: String -> BuildInfo -> Maybe String
@@ -118,7 +122,7 @@ buildVerilator' startAction lbi flags compName buildInfo mod entity = do
       & extraLibs %~ ("stdc++":)
       & options %~ fixupOptions (compileFlags++)
       & ldOptions %~ (ldFlags++)
-      & hsSourceDirs %~ (incDir:)
+      & hsSourceDirs %~ ((unsafeMakeSymbolicPath incDir):)
       & otherModules %~ (fromComponents ["Clash", "Clashilator", "FFI"]:)
   where
     verbosity = fromFlagOrDefault normal (buildVerbosity flags)
@@ -126,7 +130,7 @@ buildVerilator' startAction lbi flags compName buildInfo mod entity = do
     clk = lookup "x-clashilator-clock" $ view customFieldsBI buildInfo
 
     -- TODO: Maybe we could add extra source dirs from "x-clashilator-source-dirs"?
-    srcDirs = view hsSourceDirs buildInfo
+    srcDirs = map getSymbolicPath $ view hsSourceDirs buildInfo
     outDir = case compName of
         Nothing -> buildDir lbi
         Just name -> buildDir lbi </> unUnqualComponentName name
@@ -136,10 +140,14 @@ buildVerilator' startAction lbi flags compName buildInfo mod entity = do
 clashilate :: LocalBuildInfo -> BuildFlags -> Component -> IO BuildInfo
 clashilate lbi flags c = do
 #if MIN_VERSION_ghc(8,10,0)
+#if MIN_VERSION_ghc(9,0,0)
+    let startAction = return ()
+#else
     linker <- uninitializedLinker
     let startAction = do
             env <- getSession
             setSession (env {hsc_dynLinker = linker})
+#endif
 #else
     let startAction = return ()
 #endif

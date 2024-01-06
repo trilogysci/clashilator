@@ -12,16 +12,16 @@ license: MIT
 
 dependencies:
   - base >= 4.14 && < 5
-  - Cabal ^>= 3.2.1
+  - Cabal
   - lens
 
   - ghc
-  - clash-lib ^>= 1.4.2 || ^>= 1.6.1
-  - clash-ghc ^>= 1.4.2 || ^>= 1.6.1
+  - clash-lib
+  - clash-ghc
   - text
   - filepath
-  - stache ^>= 2.3
-  - aeson ^>= 1.5 || ^>= 2.0
+  - stache
+  - aeson
   - unordered-containers
   - optparse-applicative
   - containers
